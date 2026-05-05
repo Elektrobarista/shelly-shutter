@@ -110,3 +110,7 @@ The named volume `shelly-shutter-data` keeps `/data/settings.json` across restar
 ## Notes
 
 The app is intended for local network use. The Shelly password is read by the local Node server and is not sent to frontend JavaScript.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
