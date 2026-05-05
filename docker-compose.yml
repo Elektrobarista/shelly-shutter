@@ -1,0 +1,17 @@
+services:
+  shelly-shutter:
+    build: .
+    container_name: shelly-shutter
+    ports:
+      - "4173:4173"
+    environment:
+      SHELLY_USER: ${SHELLY_USER:-admin}
+      SHELLY_PASSWORD: ${SHELLY_PASSWORD}
+      PORT: 4173
+      DATA_DIR: /data
+    volumes:
+      - shelly-shutter-data:/data
+    restart: unless-stopped
+
+volumes:
+  shelly-shutter-data:

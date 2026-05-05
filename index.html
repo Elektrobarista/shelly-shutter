@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shelly Shutter</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Local shutter control</p>
+            <h1>Shelly Shutter</h1>
+          </div>
+          <div class="status-pill" id="connectionStatus">Not connected</div>
+        </div>
+
+        <div class="settings">
+          <label>
+            Shelly address
+            <input id="hostInput" type="text" inputmode="url" placeholder="192.168.1.42 or http://shellyplus2pm.local">
+          </label>
+          <label>
+            Cover id
+            <input id="coverIdInput" type="number" min="0" step="1" value="0">
+          </label>
+          <button id="saveButton" class="secondary" type="button">Save</button>
+        </div>
+        <button id="testButton" class="secondary wide setup-test" type="button">Test connection</button>
+
+        <div class="control-surface">
+          <div class="visual">
+            <img src="./assets/shutter.svg" alt="" aria-hidden="true">
+            <div>
+              <p class="label">Position</p>
+              <p class="position" id="positionText">--%</p>
+              <p class="state" id="stateText">Waiting for device</p>
+            </div>
+          </div>
+
+          <div class="buttons" aria-label="Shutter commands">
+            <button id="openButton" type="button">Open</button>
+            <button id="stopButton" class="danger" type="button">Stop</button>
+            <button id="closeButton" type="button">Close</button>
+          </div>
+
+          <label class="slider-label">
+            Target position
+            <span id="targetText">50%</span>
+          </label>
+          <input id="positionSlider" type="range" min="0" max="100" value="50">
+          <button id="goButton" class="wide" type="button">Move to position</button>
+        </div>
+
+        <p class="message" id="message" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

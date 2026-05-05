@@ -1,0 +1,259 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7f3;
+  --text: #18221f;
+  --muted: #5d6963;
+  --line: #cfd7d2;
+  --panel: #ffffff;
+  --accent: #0f766e;
+  --accent-strong: #0b5d56;
+  --danger: #b42318;
+  --danger-strong: #8f1b13;
+  --button-text: #ffffff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.1), transparent 38%),
+    var(--bg);
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.shell {
+  width: min(100%, 760px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  align-items: center;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 18px 48px rgba(24, 34, 31, 0.12);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.eyebrow,
+.label,
+.message {
+  color: var(--muted);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.75rem);
+  line-height: 1;
+}
+
+.status-pill {
+  min-width: 126px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.status-pill.ok {
+  border-color: rgba(15, 118, 110, 0.35);
+  color: var(--accent-strong);
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.status-pill.bad {
+  border-color: rgba(180, 35, 24, 0.35);
+  color: var(--danger);
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.settings {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+}
+
+.control-surface {
+  margin-top: 30px;
+  display: grid;
+  gap: 18px;
+}
+
+.setup-test {
+  margin-top: 12px;
+}
+
+.visual {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.visual img {
+  width: 100%;
+  max-width: 120px;
+  height: auto;
+}
+
+.label {
+  margin: 0;
+}
+
+.position {
+  margin: 2px 0;
+  font-size: clamp(3rem, 15vw, 6rem);
+  line-height: 0.95;
+  font-weight: 800;
+}
+
+.state {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted);
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 16px;
+  background: var(--accent);
+  color: var(--button-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button:hover {
+  background: var(--accent-strong);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button.secondary {
+  background: #263a35;
+}
+
+button.secondary:hover {
+  background: #18221f;
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+button.danger:hover {
+  background: var(--danger-strong);
+}
+
+.wide {
+  width: 100%;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.message {
+  min-height: 1.5em;
+  margin: 18px 0 0;
+}
+
+@media (max-width: 620px) {
+  .shell {
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .topbar,
+  .settings,
+  .visual,
+  .buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    display: grid;
+  }
+
+  .status-pill {
+    width: 100%;
+  }
+
+  .visual {
+    justify-items: center;
+    text-align: center;
+  }
+}

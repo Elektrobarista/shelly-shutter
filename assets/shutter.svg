@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Window shutter">
+  <rect x="20" y="14" width="120" height="132" rx="8" fill="#e8eee9" stroke="#9aacac" stroke-width="4"/>
+  <rect x="34" y="28" width="92" height="104" rx="4" fill="#ffffff"/>
+  <g fill="#cbd8d6">
+    <rect x="34" y="28" width="92" height="12"/>
+    <rect x="34" y="46" width="92" height="12"/>
+    <rect x="34" y="64" width="92" height="12"/>
+    <rect x="34" y="82" width="92" height="12"/>
+    <rect x="34" y="100" width="92" height="12"/>
+  </g>
+  <rect x="76" y="28" width="8" height="104" fill="#9aacac"/>
+  <path d="M47 135h66" stroke="#0f766e" stroke-width="8" stroke-linecap="round"/>
+</svg>
