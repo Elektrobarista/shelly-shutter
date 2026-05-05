@@ -22,7 +22,7 @@ Then open:
 http://127.0.0.1:4173/
 ```
 
-Enter the Shelly address and save it.
+Open the settings with the gear button, enter the Shelly address, and save it.
 Use **Test connection** first. It checks whether the local controller can authenticate with the Shelly and whether `cover:0` exists.
 
 Examples:

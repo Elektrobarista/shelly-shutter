@@ -1,9 +1,13 @@
 const STORAGE_KEY = "shelly-shutter-settings";
+const FOCUSABLE_SELECTOR = "button, input, [href], select, textarea, [tabindex]:not([tabindex='-1'])";
 
 const hostInput = document.querySelector("#hostInput");
 const coverIdInput = document.querySelector("#coverIdInput");
 const saveButton = document.querySelector("#saveButton");
 const testButton = document.querySelector("#testButton");
+const settingsButton = document.querySelector("#settingsButton");
+const settingsModal = document.querySelector("#settingsModal");
+const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const openButton = document.querySelector("#openButton");
 const stopButton = document.querySelector("#stopButton");
 const closeButton = document.querySelector("#closeButton");
@@ -17,6 +21,7 @@ const connectionStatus = document.querySelector("#connectionStatus");
 
 let settings = loadLocalSettings();
 let pollTimer = null;
+let focusBeforeSettings = null;
 
 targetText.textContent = `${positionSlider.value}%`;
 applySettings(settings);
@@ -31,6 +36,11 @@ saveButton.addEventListener("click", async () => {
 });
 
 testButton.addEventListener("click", testConnection);
+settingsButton.addEventListener("click", openSettings);
+closeSettingsButton.addEventListener("click", closeSettings);
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) closeSettings();
+});
 
 openButton.addEventListener("click", () => runCommand("Cover.Open"));
 stopButton.addEventListener("click", () => runCommand("Cover.Stop"));
@@ -44,6 +54,11 @@ positionSlider.addEventListener("input", () => {
 });
 
 window.addEventListener("online", refreshStatus);
+window.addEventListener("keydown", (event) => {
+  if (settingsModal.hidden) return;
+  if (event.key === "Escape") closeSettings();
+  if (event.key === "Tab") keepFocusInSettings(event);
+});
 
 async function init() {
   try {
@@ -80,6 +95,7 @@ async function saveSettings(nextSettings) {
     persistLocalSettings(settings);
     applySettings(settings);
     setMessage("Saved permanently. Checking Shelly status...");
+    closeSettings();
     await refreshStatus();
   } catch (error) {
     showError(error);
@@ -252,6 +268,40 @@ function applySettings(nextSettings) {
   hostInput.value = nextSettings.host;
   coverIdInput.value = String(nextSettings.coverId);
   setControlsEnabled(Boolean(nextSettings.host));
+}
+
+function openSettings() {
+  focusBeforeSettings = document.activeElement;
+  settingsModal.hidden = false;
+  settingsButton.setAttribute("aria-expanded", "true");
+  document.body.classList.add("modal-open");
+  hostInput.focus();
+}
+
+function closeSettings() {
+  settingsModal.hidden = true;
+  settingsButton.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("modal-open");
+  const focusTarget = focusBeforeSettings instanceof HTMLElement ? focusBeforeSettings : settingsButton;
+  focusBeforeSettings = null;
+  focusTarget.focus();
+}
+
+function keepFocusInSettings(event) {
+  const focusable = Array.from(settingsModal.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter((element) => !element.disabled && element.offsetParent !== null);
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (!first || !last) return;
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function formatState(value) {

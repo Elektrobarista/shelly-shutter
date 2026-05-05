@@ -26,6 +26,10 @@ body {
   color: var(--text);
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 button,
 input {
   font: inherit;
@@ -53,6 +57,12 @@ input {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .eyebrow,
@@ -84,6 +94,34 @@ h1 {
   white-space: nowrap;
 }
 
+.icon-button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.icon-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.secondary-icon {
+  background: #eef3f0;
+  color: var(--text);
+}
+
+.secondary-icon:hover {
+  background: #dfe8e3;
+}
+
 .status-pill.ok {
   border-color: rgba(15, 118, 110, 0.35);
   color: var(--accent-strong);
@@ -97,11 +135,9 @@ h1 {
 }
 
 .settings {
-  margin-top: 28px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px auto;
+  grid-template-columns: minmax(0, 1fr) 96px;
   gap: 12px;
-  align-items: end;
 }
 
 label {
@@ -126,10 +162,6 @@ input[type="number"] {
   margin-top: 30px;
   display: grid;
   gap: 18px;
-}
-
-.setup-test {
-  margin-top: 12px;
 }
 
 .visual {
@@ -227,6 +259,52 @@ input[type="range"] {
   margin: 18px 0 0;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(24, 34, 31, 0.42);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal {
+  width: min(100%, 520px);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 24px 70px rgba(24, 34, 31, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.modal-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 @media (max-width: 620px) {
   .shell {
     padding: 12px;
@@ -248,8 +326,22 @@ input[type="range"] {
     display: grid;
   }
 
+  .topbar-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
   .status-pill {
     width: 100%;
+  }
+
+  .modal {
+    padding: 18px;
+  }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .visual {

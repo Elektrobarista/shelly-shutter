@@ -14,21 +14,16 @@
             <p class="eyebrow">Local shutter control</p>
             <h1>Shelly Shutter</h1>
           </div>
-          <div class="status-pill" id="connectionStatus">Not connected</div>
+          <div class="topbar-actions">
+            <div class="status-pill" id="connectionStatus">Not connected</div>
+            <button class="icon-button" id="settingsButton" type="button" aria-label="Open settings" aria-haspopup="dialog" aria-expanded="false">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 0 1-4 0V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 0 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.8a2 2 0 0 1 0-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 0 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6v-.2a2 2 0 0 1 4 0V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 0 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.2a2 2 0 0 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-
-        <div class="settings">
-          <label>
-            Shelly address
-            <input id="hostInput" type="text" inputmode="url" placeholder="192.168.1.42 or http://shellyplus2pm.local">
-          </label>
-          <label>
-            Cover id
-            <input id="coverIdInput" type="number" min="0" step="1" value="0">
-          </label>
-          <button id="saveButton" class="secondary" type="button">Save</button>
-        </div>
-        <button id="testButton" class="secondary wide setup-test" type="button">Test connection</button>
 
         <div class="control-surface">
           <div class="visual">
@@ -57,6 +52,36 @@
         <p class="message" id="message" role="status" aria-live="polite"></p>
       </section>
     </main>
+
+    <div class="modal-backdrop" id="settingsModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal-header">
+          <h2 id="settingsTitle">Settings</h2>
+          <button class="icon-button secondary-icon" id="closeSettingsButton" type="button" aria-label="Close settings">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="settings">
+          <label>
+            Shelly address
+            <input id="hostInput" type="text" inputmode="url" placeholder="192.168.1.42 or http://shellyplus2pm.local">
+          </label>
+          <label>
+            Cover id
+            <input id="coverIdInput" type="number" min="0" step="1" value="0">
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button id="testButton" class="secondary" type="button">Test connection</button>
+          <button id="saveButton" type="button">Save</button>
+        </div>
+      </section>
+    </div>
 
     <script src="./app.js"></script>
   </body>
