@@ -22,8 +22,10 @@ Then open:
 http://127.0.0.1:4173/
 ```
 
-Open the settings with the gear button, enter the Shelly address, and save it.
-Use **Test connection** first. It checks whether the local controller can authenticate with the Shelly and whether `cover:0` exists.
+Öffne die Einstellungen über das Zahnrad, trage die Shelly-Adresse ein und speichere sie.
+Nutze zuerst **Verbindung testen**. Der Test prüft, ob der lokale Controller die Shelly erreichen und sich authentifizieren kann und ob `cover:0` existiert.
+
+Im Bereich **Weckzeit** auf dem Hauptbildschirm kannst du eine tägliche Weckzeit im 24-Stunden-Format `HH:MM` eingeben. Zu dieser Zeit startet der Rolladen eine 15-Minuten-Rampe von sehr leicht geöffnet bis vollständig offen. Zuletzt gespeicherte Weckzeiten werden als Schnellwahl-Tags angezeigt; neue Setups starten mit `06:30` und `08:35`.
 
 Examples:
 

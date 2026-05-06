@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Shelly Shutter</title>
+    <title>Shelly Rolladen</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
@@ -11,12 +11,12 @@
       <section class="panel">
         <div class="topbar">
           <div>
-            <p class="eyebrow">Local shutter control</p>
-            <h1>Shelly Shutter</h1>
+            <p class="eyebrow">Lokale Rolladensteuerung</p>
+            <h1>Shelly Rolladen</h1>
           </div>
           <div class="topbar-actions">
-            <div class="status-pill" id="connectionStatus">Not connected</div>
-            <button class="icon-button" id="settingsButton" type="button" aria-label="Open settings" aria-haspopup="dialog" aria-expanded="false">
+            <div class="status-pill" id="connectionStatus">Nicht verbunden</div>
+            <button class="icon-button" id="settingsButton" type="button" aria-label="Einstellungen öffnen" aria-haspopup="dialog" aria-expanded="false">
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path>
                 <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 0 1-4 0V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 0 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.8a2 2 0 0 1 0-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 0 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6v-.2a2 2 0 0 1 4 0V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 0 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.2a2 2 0 0 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path>
@@ -31,22 +31,45 @@
             <div>
               <p class="label">Position</p>
               <p class="position" id="positionText">--%</p>
-              <p class="state" id="stateText">Waiting for device</p>
+              <p class="state" id="stateText">Warte auf Gerät</p>
             </div>
           </div>
 
-          <div class="buttons" aria-label="Shutter commands">
-            <button id="openButton" type="button">Open</button>
+          <div class="buttons" aria-label="Rolladenbefehle">
+            <button id="openButton" type="button">Öffnen</button>
             <button id="stopButton" class="danger" type="button">Stop</button>
-            <button id="closeButton" type="button">Close</button>
+            <button id="closeButton" type="button">Schließen</button>
           </div>
 
           <label class="slider-label">
-            Target position
+            Zielposition
             <span id="targetText">50%</span>
           </label>
           <input id="positionSlider" type="range" min="0" max="100" value="50">
-          <button id="goButton" class="wide" type="button">Move to position</button>
+          <button id="goButton" class="wide" type="button">Zur Position fahren</button>
+
+          <section class="wake-panel" aria-labelledby="wakeTitle">
+            <div class="wake-heading">
+              <div>
+                <h2 id="wakeTitle">Weckzeit</h2>
+                <p id="wakeStatus">Weckzeit deaktiviert.</p>
+              </div>
+              <label class="switch">
+                <input id="wakeEnabledInput" type="checkbox">
+                <span>Aktiv</span>
+              </label>
+            </div>
+
+            <div class="wake-controls">
+              <label>
+                Uhrzeit
+                <input id="wakeTimeInput" type="text" inputmode="numeric" autocomplete="off" placeholder="06:30" pattern="([01][0-9]|2[0-3]):[0-5][0-9]">
+              </label>
+              <button id="saveWakeButton" type="button">Weckzeit speichern</button>
+            </div>
+
+            <div class="time-tags" id="wakeTimeTags" aria-label="Zuletzt verwendete Weckzeiten"></div>
+          </section>
         </div>
 
         <p class="message" id="message" role="status" aria-live="polite"></p>
@@ -56,8 +79,8 @@
     <div class="modal-backdrop" id="settingsModal" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
         <div class="modal-header">
-          <h2 id="settingsTitle">Settings</h2>
-          <button class="icon-button secondary-icon" id="closeSettingsButton" type="button" aria-label="Close settings">
+          <h2 id="settingsTitle">Einstellungen</h2>
+          <button class="icon-button secondary-icon" id="closeSettingsButton" type="button" aria-label="Einstellungen schließen">
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M18 6 6 18"></path>
               <path d="m6 6 12 12"></path>
@@ -67,18 +90,18 @@
 
         <div class="settings">
           <label>
-            Shelly address
+            Shelly-Adresse
             <input id="hostInput" type="text" inputmode="url" placeholder="192.168.1.42 or http://shellyplus2pm.local">
           </label>
           <label>
-            Cover id
+            Cover-ID
             <input id="coverIdInput" type="number" min="0" step="1" value="0">
           </label>
         </div>
 
         <div class="modal-actions">
-          <button id="testButton" class="secondary" type="button">Test connection</button>
-          <button id="saveButton" type="button">Save</button>
+          <button id="testButton" class="secondary" type="button">Verbindung testen</button>
+          <button id="saveButton" type="button">Speichern</button>
         </div>
       </section>
     </div>

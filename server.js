@@ -9,6 +9,31 @@ const SHELLY_PASSWORD = process.env.SHELLY_PASSWORD || "";
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const PUBLIC_DIR = __dirname;
+const WAKE_RAMP_STEPS = [
+  { delayMs: 0, pos: 2 },
+  { delayMs: 90_000, pos: 3 },
+  { delayMs: 180_000, pos: 5 },
+  { delayMs: 270_000, pos: 8 },
+  { delayMs: 360_000, pos: 12 },
+  { delayMs: 450_000, pos: 18 },
+  { delayMs: 540_000, pos: 27 },
+  { delayMs: 630_000, pos: 40 },
+  { delayMs: 720_000, pos: 58 },
+  { delayMs: 810_000, pos: 78 },
+  { delayMs: 900_000, pos: 100 },
+];
+const MAX_RECENT_WAKE_TIMES = 5;
+const DEFAULT_WAKE_TIMES = ["06:30", "08:35"];
+
+const wakeRuntime = {
+  active: false,
+  checkedMinute: "",
+  lastDate: "",
+  lastStatus: "Weckzeit deaktiviert.",
+  lastError: "",
+  runId: 0,
+  timers: [],
+};
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -40,6 +65,11 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && request.url === "/api/wake-status") {
+      handleWakeStatus(response);
+      return;
+    }
+
     if (request.method === "GET" || request.method === "HEAD") {
       serveStatic(request, response);
       return;
@@ -59,6 +89,9 @@ server.listen(PORT, () => {
   }
 });
 
+setInterval(checkWakeSchedule, 15_000);
+checkWakeSchedule();
+
 async function handleRpc(request, response) {
   const body = await readJson(request);
   const savedSettings = await loadServerSettings();
@@ -67,13 +100,17 @@ async function handleRpc(request, response) {
   const params = body.params && typeof body.params === "object" ? body.params : {};
 
   if (!host) {
-    sendJson(response, 400, { error: "Missing Shelly address" });
+    sendJson(response, 400, { error: "Shelly-Adresse fehlt" });
     return;
   }
 
   if (!/^Cover\./.test(method)) {
     sendJson(response, 400, { error: "Unsupported RPC method" });
     return;
+  }
+
+  if (params.tag !== "wake" && method !== "Cover.GetStatus") {
+    cancelWakeRamp("Weckrampe durch manuellen Befehl gestoppt.");
   }
 
   const result = await callShelly(host, method, params);
@@ -86,7 +123,7 @@ async function handleTest(request, response) {
   const host = normalizeHost(body.host || savedSettings.host);
 
   if (!host) {
-    sendJson(response, 400, { error: "Missing Shelly address" });
+    sendJson(response, 400, { error: "Shelly-Adresse fehlt" });
     return;
   }
 
@@ -103,17 +140,28 @@ async function handleGetSettings(response) {
   sendJson(response, 200, settings);
 }
 
+function handleWakeStatus(response) {
+  sendJson(response, 200, {
+    active: wakeRuntime.active,
+    status: wakeRuntime.lastStatus,
+    error: wakeRuntime.lastError,
+  });
+}
+
 async function handleSaveSettings(request, response) {
   const body = await readJson(request);
   const settings = sanitizeSettings(body);
 
   if (!settings.host) {
-    sendJson(response, 400, { error: "Missing Shelly address" });
+    sendJson(response, 400, { error: "Shelly-Adresse fehlt" });
     return;
   }
 
   await fs.promises.mkdir(DATA_DIR, { recursive: true });
   await fs.promises.writeFile(SETTINGS_FILE, `${JSON.stringify(settings, null, 2)}\n`);
+  wakeRuntime.checkedMinute = "";
+  wakeRuntime.lastError = "";
+  wakeRuntime.lastStatus = describeWakeSettings(settings);
   sendJson(response, 200, settings);
 }
 
@@ -128,17 +176,157 @@ async function loadServerSettings() {
     return sanitizeSettings({
       host: process.env.SHELLY_HOST || "",
       coverId: Number.parseInt(process.env.SHELLY_COVER_ID || "0", 10),
+      wakeEnabled: false,
+      wakeTime: "",
+      recentWakeTimes: DEFAULT_WAKE_TIMES,
     });
   }
 }
 
 function sanitizeSettings(value) {
   const coverId = Number.parseInt(value?.coverId, 10);
+  const wakeTime = sanitizeWakeTime(value?.wakeTime);
+  const recentWakeTimes = sanitizeRecentWakeTimes(value?.recentWakeTimes, wakeTime);
 
   return {
     host: normalizeHost(value?.host || ""),
     coverId: Number.isInteger(coverId) && coverId >= 0 ? coverId : 0,
+    wakeEnabled: Boolean(value?.wakeEnabled && wakeTime),
+    wakeTime,
+    recentWakeTimes,
   };
+}
+
+async function checkWakeSchedule() {
+  const now = new Date();
+  const minuteKey = formatDateMinute(now);
+  if (minuteKey === wakeRuntime.checkedMinute) return;
+  wakeRuntime.checkedMinute = minuteKey;
+
+  const settings = await loadServerSettings();
+  if (!settings.wakeEnabled || !settings.wakeTime || wakeRuntime.active) {
+    if (!wakeRuntime.active) wakeRuntime.lastStatus = describeWakeSettings(settings);
+    return;
+  }
+
+  const today = formatDate(now);
+  if (wakeRuntime.lastDate === today || formatTime(now) !== settings.wakeTime) return;
+
+  wakeRuntime.lastDate = today;
+  startWakeRamp(settings).catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    wakeRuntime.lastError = message;
+    wakeRuntime.lastStatus = `Weckrampe fehlgeschlagen: ${message}`;
+    wakeRuntime.active = false;
+    clearWakeTimers();
+  });
+}
+
+async function startWakeRamp(settings) {
+  if (!settings.host) throw new Error("Shelly-Adresse fehlt");
+
+  const status = await callShelly(settings.host, "Cover.GetStatus", { id: settings.coverId });
+  if (status.pos_control === false) {
+    throw new Error("Shelly-Cover ist nicht für Positionssteuerung kalibriert.");
+  }
+
+  const currentPosition = readShellyPosition(status);
+  if (typeof currentPosition !== "number") {
+    throw new Error("Shelly-Cover-Position ist unbekannt.");
+  }
+
+  clearWakeTimers();
+  wakeRuntime.active = true;
+  wakeRuntime.lastError = "";
+  wakeRuntime.lastStatus = "Weckrampe läuft.";
+  wakeRuntime.runId += 1;
+
+  const runId = wakeRuntime.runId;
+  for (const step of WAKE_RAMP_STEPS) {
+    if (currentPosition > step.pos) continue;
+    wakeRuntime.timers.push(setTimeout(() => {
+      runWakeStep(settings, step, runId);
+    }, step.delayMs));
+  }
+
+  wakeRuntime.timers.push(setTimeout(() => {
+    if (wakeRuntime.runId !== runId) return;
+    wakeRuntime.active = false;
+    wakeRuntime.lastStatus = describeWakeSettings(settings);
+    clearWakeTimers();
+  }, WAKE_RAMP_STEPS.at(-1).delayMs + 5_000));
+}
+
+async function runWakeStep(settings, step, runId) {
+  if (wakeRuntime.runId !== runId) return;
+
+  try {
+    await callShelly(settings.host, "Cover.GoToPosition", {
+      id: settings.coverId,
+      pos: step.pos,
+      tag: "wake",
+    });
+    wakeRuntime.lastStatus = `Weckrampe auf ${step.pos}% gefahren.`;
+  } catch (error) {
+    if (wakeRuntime.runId !== runId) return;
+    const message = error instanceof Error ? error.message : String(error);
+    wakeRuntime.lastError = message;
+    wakeRuntime.lastStatus = `Weckrampe fehlgeschlagen: ${message}`;
+    wakeRuntime.active = false;
+    clearWakeTimers();
+  }
+}
+
+function cancelWakeRamp(status) {
+  if (!wakeRuntime.active) return;
+  wakeRuntime.active = false;
+  wakeRuntime.runId += 1;
+  wakeRuntime.lastStatus = status;
+  clearWakeTimers();
+}
+
+function clearWakeTimers() {
+  for (const timer of wakeRuntime.timers) clearTimeout(timer);
+  wakeRuntime.timers = [];
+}
+
+function sanitizeWakeTime(value) {
+  const time = String(value || "").trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : "";
+}
+
+function sanitizeRecentWakeTimes(value, wakeTime) {
+  const candidates = Array.isArray(value) ? value : DEFAULT_WAKE_TIMES;
+  const times = wakeTime ? [wakeTime, ...candidates] : candidates;
+  return [...new Set(times.map(sanitizeWakeTime).filter(Boolean))].slice(0, MAX_RECENT_WAKE_TIMES);
+}
+
+function describeWakeSettings(settings) {
+  if (!settings.wakeEnabled || !settings.wakeTime) return "Weckzeit deaktiviert.";
+  return `Weckzeit für die nächste Ausführung um ${settings.wakeTime} gesetzt.`;
+}
+
+function readShellyPosition(status) {
+  if (typeof status.current_pos === "number") return status.current_pos;
+  if (typeof status.pos === "number") return status.pos;
+  if (typeof status.apos === "number") return status.apos;
+  return null;
+}
+
+function formatTime(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDate(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function formatDateMinute(date) {
+  return `${formatDate(date)} ${formatTime(date)}`;
 }
 
 async function callShelly(host, method, params) {

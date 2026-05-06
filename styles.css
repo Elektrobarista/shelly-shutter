@@ -259,6 +259,79 @@ input[type="range"] {
   margin: 18px 0 0;
 }
 
+.wake-panel {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+}
+
+.wake-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.wake-heading h2 {
+  font-size: 1.05rem;
+}
+
+.wake-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+}
+
+.wake-heading p.bad {
+  color: var(--danger);
+}
+
+.switch {
+  min-height: 44px;
+  display: flex;
+  grid-template-columns: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.switch input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.wake-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.time-tags {
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button.time-tag {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+button.time-tag:hover {
+  background: rgba(15, 118, 110, 0.14);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -318,12 +391,23 @@ h2 {
   .topbar,
   .settings,
   .visual,
-  .buttons {
+  .buttons,
+  .wake-heading,
+  .wake-controls {
     grid-template-columns: 1fr;
   }
 
   .topbar {
     display: grid;
+  }
+
+  .wake-heading,
+  .wake-controls {
+    display: grid;
+  }
+
+  .switch {
+    justify-content: start;
   }
 
   .topbar-actions {

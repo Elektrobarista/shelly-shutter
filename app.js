@@ -18,6 +18,12 @@ const positionText = document.querySelector("#positionText");
 const stateText = document.querySelector("#stateText");
 const message = document.querySelector("#message");
 const connectionStatus = document.querySelector("#connectionStatus");
+const wakeEnabledInput = document.querySelector("#wakeEnabledInput");
+const wakeTimeInput = document.querySelector("#wakeTimeInput");
+const saveWakeButton = document.querySelector("#saveWakeButton");
+const wakeTimeTags = document.querySelector("#wakeTimeTags");
+const wakeStatus = document.querySelector("#wakeStatus");
+const DEFAULT_WAKE_TIMES = ["06:30", "08:35"];
 
 let settings = loadLocalSettings();
 let pollTimer = null;
@@ -28,10 +34,10 @@ applySettings(settings);
 init();
 
 saveButton.addEventListener("click", async () => {
-  settings = {
+  settings = mergeSettings({
     host: normalizeHost(hostInput.value),
     coverId: Number.parseInt(coverIdInput.value, 10) || 0,
-  };
+  });
   await saveSettings(settings);
 });
 
@@ -48,6 +54,38 @@ closeButton.addEventListener("click", () => runCommand("Cover.Close"));
 goButton.addEventListener("click", () => {
   runCommand("Cover.GoToPosition", { pos: Number.parseInt(positionSlider.value, 10) });
 });
+saveWakeButton.addEventListener("click", async () => {
+  if (!settings.host) {
+    setMessage("Bitte zuerst die Shelly-Adresse in den Einstellungen eintragen.");
+    return;
+  }
+
+  const wakeTime = readWakeTimeSelection();
+  if (wakeEnabledInput.checked && !isValidWakeTime(wakeTime)) {
+    setMessage("Bitte eine gültige Weckzeit im 24-Stunden-Format eingeben, zum Beispiel 06:30.");
+    wakeTimeInput.focus();
+    return;
+  }
+
+  settings = mergeSettings({
+    wakeEnabled: wakeEnabledInput.checked,
+    wakeTime,
+    recentWakeTimes: buildRecentWakeTimes(wakeTime, settings.recentWakeTimes),
+  });
+  await saveSettings(settings, { closeModal: false, refreshShelly: false });
+});
+
+wakeTimeTags.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-time]");
+  if (!button) return;
+  applyWakeTime(button.dataset.time);
+  wakeEnabledInput.checked = true;
+});
+
+wakeTimeInput.addEventListener("blur", () => {
+  const normalizedTime = normalizeWakeTime(wakeTimeInput.value);
+  if (normalizedTime) wakeTimeInput.value = normalizedTime;
+});
 
 positionSlider.addEventListener("input", () => {
   targetText.textContent = `${positionSlider.value}%`;
@@ -63,7 +101,7 @@ window.addEventListener("keydown", (event) => {
 async function init() {
   try {
     const serverSettings = await loadServerSettings();
-    settings = serverSettings.host ? serverSettings : settings;
+    settings = serverSettings.host ? serverSettings : mergeSettings(serverSettings);
     persistLocalSettings(settings);
     applySettings(settings);
   } catch (error) {
@@ -71,10 +109,15 @@ async function init() {
   }
 
   refreshStatus();
-  pollTimer = window.setInterval(refreshStatus, 5000);
+  refreshWakeStatus();
+  pollTimer = window.setInterval(() => {
+    refreshStatus();
+    refreshWakeStatus();
+  }, 5000);
 }
 
-async function saveSettings(nextSettings) {
+async function saveSettings(nextSettings, options = {}) {
+  const { closeModal: shouldCloseModal = true, refreshShelly = true } = options;
   setBusy(true);
   try {
     const response = await fetch("/api/settings", {
@@ -94,9 +137,13 @@ async function saveSettings(nextSettings) {
     settings = payload;
     persistLocalSettings(settings);
     applySettings(settings);
-    setMessage("Saved permanently. Checking Shelly status...");
-    closeSettings();
-    await refreshStatus();
+    setMessage("Dauerhaft gespeichert.");
+    if (shouldCloseModal) closeSettings();
+    if (refreshShelly) {
+      setMessage("Dauerhaft gespeichert. Prüfe Shelly-Status...");
+      await refreshStatus();
+    }
+    await refreshWakeStatus();
   } catch (error) {
     showError(error);
   } finally {
@@ -118,19 +165,22 @@ async function loadServerSettings() {
   return {
     host: payload.host || "",
     coverId: Number.isInteger(payload.coverId) ? payload.coverId : 0,
+    wakeEnabled: Boolean(payload.wakeEnabled),
+    wakeTime: isValidWakeTime(payload.wakeTime) ? payload.wakeTime : "",
+    recentWakeTimes: sanitizeRecentWakeTimes(payload.recentWakeTimes),
   };
 }
 
 async function runCommand(method, params = {}) {
   if (!settings.host) {
-    setMessage("Enter the Shelly address first.");
+    setMessage("Bitte zuerst die Shelly-Adresse eintragen.");
     return;
   }
 
   setBusy(true);
   try {
     await shellyRpc(method, params);
-    setMessage("Command sent.");
+    setMessage("Befehl gesendet.");
     await refreshStatus();
   } catch (error) {
     showError(error);
@@ -141,13 +191,13 @@ async function runCommand(method, params = {}) {
 
 async function refreshStatus() {
   if (!settings.host) {
-    updateConnection("Not connected", "bad");
+    updateConnection("Nicht verbunden", "bad");
     return;
   }
 
   try {
     const status = await shellyRpc("Cover.GetStatus");
-    updateConnection("Connected", "ok");
+    updateConnection("Verbunden", "ok");
     renderStatus(status);
   } catch (error) {
     updateConnection("Offline", "bad");
@@ -155,10 +205,29 @@ async function refreshStatus() {
   }
 }
 
+async function refreshWakeStatus() {
+  try {
+    const response = await fetch("/api/wake-status", {
+      method: "GET",
+      cache: "no-store",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+    wakeStatus.textContent = payload.error || payload.status || "Weckzeit deaktiviert.";
+    wakeStatus.classList.toggle("bad", Boolean(payload.error));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    wakeStatus.textContent = `Weckstatus nicht verfügbar. ${detail}`;
+    wakeStatus.classList.add("bad");
+  }
+}
+
 async function testConnection() {
   const host = normalizeHost(hostInput.value);
   if (!host) {
-    setMessage("Enter the Shelly address first.");
+    setMessage("Bitte zuerst die Shelly-Adresse eintragen.");
     return;
   }
 
@@ -179,9 +248,9 @@ async function testConnection() {
     }
 
     if (payload.hasCover0) {
-      setMessage("Connection works. Shelly cover:0 was found.");
+      setMessage("Verbindung funktioniert. Shelly cover:0 wurde gefunden.");
     } else {
-      setMessage("Shelly answered, but cover:0 was not found. Check that the device is in Cover/Shutter mode.");
+      setMessage("Shelly antwortet, aber cover:0 wurde nicht gefunden. Prüfe, ob das Gerät im Cover-/Rolladenmodus ist.");
     }
   } catch (error) {
     showError(error);
@@ -254,9 +323,12 @@ function loadLocalSettings() {
     return {
       host: parsed.host || "",
       coverId: Number.isInteger(parsed.coverId) ? parsed.coverId : 0,
+      wakeEnabled: Boolean(parsed.wakeEnabled),
+      wakeTime: isValidWakeTime(parsed.wakeTime) ? parsed.wakeTime : "",
+      recentWakeTimes: sanitizeRecentWakeTimes(parsed.recentWakeTimes),
     };
   } catch {
-    return { host: "", coverId: 0 };
+    return defaultSettings();
   }
 }
 
@@ -267,6 +339,9 @@ function persistLocalSettings(nextSettings) {
 function applySettings(nextSettings) {
   hostInput.value = nextSettings.host;
   coverIdInput.value = String(nextSettings.coverId);
+  wakeEnabledInput.checked = Boolean(nextSettings.wakeEnabled);
+  applyWakeTime(nextSettings.wakeTime || DEFAULT_WAKE_TIMES[0]);
+  renderWakeTimeTags(nextSettings.recentWakeTimes);
   setControlsEnabled(Boolean(nextSettings.host));
 }
 
@@ -305,18 +380,39 @@ function keepFocusInSettings(event) {
 }
 
 function formatState(value) {
-  return String(value).replace(/_/g, " ");
+  const state = String(value);
+  const translations = {
+    closed: "geschlossen",
+    closing: "schließt",
+    open: "offen",
+    opening: "öffnet",
+    stopped: "gestoppt",
+    stop: "gestoppt",
+  };
+  return translations[state] || state.replace(/_/g, " ");
 }
 
 function setBusy(isBusy) {
-  [openButton, stopButton, closeButton, goButton, saveButton, testButton].forEach((button) => {
+  [saveButton, testButton].forEach((button) => {
     button.disabled = isBusy;
   });
+
+  if (isBusy) {
+    [openButton, stopButton, closeButton, goButton, positionSlider, saveWakeButton].forEach((control) => {
+      control.disabled = true;
+    });
+    return;
+  }
+
+  setControlsEnabled(Boolean(settings.host));
 }
 
 function setControlsEnabled(enabled) {
   [openButton, stopButton, closeButton, goButton, positionSlider].forEach((control) => {
     control.disabled = !enabled;
+  });
+  [wakeEnabledInput, wakeTimeInput, saveWakeButton].forEach((control) => {
+    control.disabled = false;
   });
 }
 
@@ -332,9 +428,79 @@ function setMessage(text) {
 
 function showError(error) {
   const detail = error instanceof Error ? error.message : String(error);
-  setMessage(`Could not reach Shelly. ${detail}`);
+  setMessage(`Shelly konnte nicht erreicht werden. ${detail}`);
 }
 
 window.addEventListener("beforeunload", () => {
   if (pollTimer) window.clearInterval(pollTimer);
 });
+
+function defaultSettings() {
+  return {
+    host: "",
+    coverId: 0,
+    wakeEnabled: false,
+    wakeTime: "",
+    recentWakeTimes: DEFAULT_WAKE_TIMES,
+  };
+}
+
+function mergeSettings(nextSettings) {
+  return {
+    ...defaultSettings(),
+    ...settings,
+    ...nextSettings,
+    recentWakeTimes: sanitizeRecentWakeTimes(nextSettings.recentWakeTimes ?? settings.recentWakeTimes),
+  };
+}
+
+function isValidWakeTime(value) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ""));
+}
+
+function normalizeWakeTime(value) {
+  const trimmed = String(value || "").trim();
+  const fullMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (fullMatch) return `${fullMatch[1]}:${fullMatch[2]}`;
+
+  const shortMatch = /^(\d{1,2})[:.](\d{1,2})$/.exec(trimmed);
+  if (!shortMatch) return "";
+
+  const hour = Number.parseInt(shortMatch[1], 10);
+  const minute = Number.parseInt(shortMatch[2], 10);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour > 23 || minute > 59) return "";
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function sanitizeRecentWakeTimes(value) {
+  const times = Array.isArray(value) ? value : DEFAULT_WAKE_TIMES;
+  return [...new Set(times.filter(isValidWakeTime))].slice(0, 5);
+}
+
+function buildRecentWakeTimes(wakeTime, recentWakeTimes) {
+  const times = isValidWakeTime(wakeTime) ? [wakeTime, ...recentWakeTimes] : recentWakeTimes;
+  return sanitizeRecentWakeTimes(times);
+}
+
+function renderWakeTimeTags(recentWakeTimes) {
+  wakeTimeTags.replaceChildren();
+  for (const time of recentWakeTimes) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "time-tag";
+    button.dataset.time = time;
+    button.textContent = time;
+    wakeTimeTags.append(button);
+  }
+}
+
+function applyWakeTime(time) {
+  const safeTime = isValidWakeTime(time) ? time : DEFAULT_WAKE_TIMES[0];
+  wakeTimeInput.value = safeTime;
+}
+
+function readWakeTimeSelection() {
+  const wakeTime = normalizeWakeTime(wakeTimeInput.value);
+  if (wakeTime) wakeTimeInput.value = wakeTime;
+  return wakeTime;
+}
